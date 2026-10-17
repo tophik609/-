@@ -11,10 +11,8 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
 import org.lwjgl.glfw.GLFW;
 
 public class PulseClient implements ClientModInitializer {
@@ -45,15 +43,7 @@ public class PulseClient implements ClientModInitializer {
 
         // Эффекты при ударе
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
-            if (world.isClient() && ModuleManager.HIT_EFFECTS.enabled) {
-                Vec3d p = entity.getEntityPos().add(0, entity.getHeight() / 2.0, 0);
-                for (int i = 0; i < 18; i++) {
-                    double dx = (world.random.nextDouble() - 0.5) * 0.6;
-                    double dy = (world.random.nextDouble() - 0.2) * 0.5;
-                    double dz = (world.random.nextDouble() - 0.5) * 0.6;
-                    world.addParticleClient(ParticleTypes.CRIT, p.x, p.y, p.z, dx, dy, dz);
-                }
-            }
+            if (world.isClient()) ModuleManager.onAttack(entity);
             return ActionResult.PASS;
         });
     }

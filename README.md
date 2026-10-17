@@ -1,6 +1,6 @@
 # Pulse Visuals (Fabric, Minecraft 1.21.11)
 
-Клиентский визуальный мод: HUD, анимированный список модулей, ClickGUI (Right Shift),
+Клиентский визуальный мод в стиле Pulse: плашка, TargetHUD, тёмное меню (Right Shift), пресеты цвета, Hit Effects, Jump Circle, Trail, Full Bright.
 Fullbright, Trail, HitEffects.
 
 ## Сборка
