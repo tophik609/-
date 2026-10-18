@@ -7,6 +7,17 @@ public final class Gfx {
     private Gfx() {}
 
     public static void round(DrawContext ctx, int x, int y, int w, int h, int r, int color) {
+        float sc = com.pulse.client.module.Cam.scale;
+        if (sc < 1.5f) { roundRaw(ctx, x, y, w, h, r, color); return; }
+        // рисуем в физических пикселях — углы получаются гладкими
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().scale(1f / sc, 1f / sc);
+        roundRaw(ctx, Math.round(x * sc), Math.round(y * sc), Math.round(w * sc), Math.round(h * sc),
+                Math.round(r * sc), color);
+        ctx.getMatrices().popMatrix();
+    }
+
+    private static void roundRaw(DrawContext ctx, int x, int y, int w, int h, int r, int color) {
         r = Math.min(r, Math.min(w, h) / 2);
         if (r <= 0) { ctx.fill(x, y, x + w, y + h, color); return; }
         for (int i = 0; i < r; i++) {

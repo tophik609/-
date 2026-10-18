@@ -1,6 +1,10 @@
 package com.pulse.client.ui;
 
+import com.pulse.client.module.Cam;
+import com.pulse.client.module.ChinaHat;
+import com.pulse.client.module.Comets;
 import com.pulse.client.module.Module;
+import com.pulse.client.module.Rings;
 import com.pulse.client.module.ModuleManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -24,6 +28,7 @@ public final class HudRenderer {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.options.hudHidden || mc.player == null) return;
         TextRenderer tr = mc.textRenderer;
+        Cam.update(mc);
 
         if (ModuleManager.WATERMARK.enabled) drawWatermark(ctx, tr, mc);
         if (ModuleManager.INFO.enabled) drawInfo(ctx, tr, mc);
@@ -31,7 +36,13 @@ public final class HudRenderer {
         if (ModuleManager.TARGET_TAG.enabled) drawTargetTag(ctx, tr, mc);
         drawModuleList(ctx, tr);
         Widgets.render(ctx, tr, mc);
-        if (ModuleManager.HIT_EFFECTS.enabled) com.pulse.client.module.Comets.render(ctx, mc);
+
+        // эффекты «в мире» рисуем в физических пикселях — гладко, без крупных квадратов
+        Fx.begin(ctx);
+        if (ModuleManager.JUMP_CIRCLE.enabled) Rings.render(ctx);
+        if (ModuleManager.CHINA_HAT.enabled) ChinaHat.render(ctx, mc);
+        if (ModuleManager.HIT_EFFECTS.enabled) Comets.render(ctx);
+        Fx.end(ctx);
     }
 
     /** Свой прицел: точка в центре и четыре засечки. */
@@ -61,7 +72,7 @@ public final class HudRenderer {
         String a = "pulsevisuals";
         String b = ping(mc) + " ms";
         String c = mc.getCurrentFps() + " FPS";
-        int w = 10 + 8 + tr.getWidth(a) + 8 + tr.getWidth(b) + 8 + tr.getWidth(c) + 6;
+        int w = 10 + 8 + Fonts.width(tr, a) + 8 + Fonts.width(tr, b) + 8 + Fonts.width(tr, c) + 6;
         int x = ctx.getScaledWindowWidth() / 2 - w / 2, y = 4, h = 14;
         Gfx.round(ctx, x, y, w, h, 5, Theme.BG);
         // градиентная линия снизу плашки
@@ -69,19 +80,19 @@ public final class HudRenderer {
         // акцентная точка
         Gfx.round(ctx, x + 5, y + 4, 6, 6, 3, Theme.accent(0));
         int cx = x + 16;
-        ctx.drawText(tr, a, cx, y + 3, Theme.TEXT, false);
-        cx += tr.getWidth(a) + 8;
-        ctx.drawText(tr, b, cx, y + 3, Theme.TEXT_DIM, false);
-        cx += tr.getWidth(b) + 8;
-        ctx.drawText(tr, c, cx, y + 3, Theme.TEXT_DIM, false);
+        Fonts.draw(ctx, tr, a, cx, y + 3, Theme.TEXT, false);
+        cx += Fonts.width(tr, a) + 8;
+        Fonts.draw(ctx, tr, b, cx, y + 3, Theme.TEXT_DIM, false);
+        cx += Fonts.width(tr, b) + 8;
+        Fonts.draw(ctx, tr, c, cx, y + 3, Theme.TEXT_DIM, false);
     }
 
     private static void drawInfo(DrawContext ctx, TextRenderer tr, MinecraftClient mc) {
         String line = "XYZ " + mc.player.getBlockX() + " " + mc.player.getBlockY() + " " + mc.player.getBlockZ();
-        int w = tr.getWidth(line) + 10;
+        int w = Fonts.width(tr, line) + 10;
         int x = 4, y = ctx.getScaledWindowHeight() - 16;
         Gfx.round(ctx, x, y, w, 12, 4, Theme.BG);
-        ctx.drawText(tr, line, x + 5, y + 2, Theme.TEXT, false);
+        Fonts.draw(ctx, tr, line, x + 5, y + 2, Theme.TEXT, false);
     }
 
     private static LivingEntity pickTarget(MinecraftClient mc) {
@@ -113,10 +124,10 @@ public final class HudRenderer {
         // «аватар» — квадрат с первой буквой ника
         Gfx.round(ctx, x + 5, y + 5, 20, 20, 4, Theme.withAlpha(Theme.accent(0), 0x55));
         String letter = name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase();
-        ctx.drawText(tr, letter, x + 15 - tr.getWidth(letter) / 2, y + 11, Theme.TEXT, false);
+        Fonts.draw(ctx, tr, letter, x + 15 - Fonts.width(tr, letter) / 2, y + 11, Theme.TEXT, false);
 
-        ctx.drawText(tr, name, x + 30, y + 6, Theme.TEXT, false);
-        ctx.drawText(tr, hp, x + 30, y + 16, Theme.TEXT_DIM, false);
+        Fonts.draw(ctx, tr, name, x + 30, y + 6, Theme.TEXT, false);
+        Fonts.draw(ctx, tr, hp, x + 30, y + 16, Theme.TEXT_DIM, false);
 
         // полоска HP
         int bx = x + 5, by = y + h - 7, bw = w - 10;
@@ -134,27 +145,11 @@ public final class HudRenderer {
         LivingEntity t = pickTarget(mc);
         if (t == null || t == mc.player) { tagX = -1; return; }
 
-        net.minecraft.util.math.Vec3d eye = mc.player.getEyePos();
         net.minecraft.util.math.Vec3d head = t.getEntityPos().add(0, t.getHeight() + 0.45, 0);
-        double dx = head.x - eye.x, dy = head.y - eye.y, dz = head.z - eye.z;
-
-        double yaw = Math.toRadians(mc.player.getYaw());
-        double pitch = Math.toRadians(mc.player.getPitch());
-        double fx = -Math.sin(yaw) * Math.cos(pitch), fy = -Math.sin(pitch), fz = Math.cos(yaw) * Math.cos(pitch);
-        double rx = -Math.cos(yaw), ry = 0, rz = -Math.sin(yaw);
-        double ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
-
-        double z = dx * fx + dy * fy + dz * fz;
-        if (z < 0.2) { tagX = -1; return; }
-        double x = dx * rx + dy * ry + dz * rz;
-        double y = dx * ux + dy * uy + dz * uz;
-
         int sw = ctx.getScaledWindowWidth(), sh = ctx.getScaledWindowHeight();
-        double fov = Math.toRadians(mc.options.getFov().getValue());
-        double f = 1.0 / Math.tan(fov / 2.0);
-        double aspect = (double) sw / sh;
-        float px = (float) ((x / z) * f / aspect * 0.5 + 0.5) * sw;
-        float py = (float) (0.5 - (y / z) * f * 0.5) * sh;
+        float[] sp = Cam.project(head.x, head.y, head.z, sw, sh);
+        if (sp == null) { tagX = -1; return; }
+        float px = sp[0], py = sp[1];
 
         // сглаживание, чтобы метка не дёргалась на 20 тиках
         if (tagX < 0) { tagX = px; tagY = py; }
@@ -164,7 +159,7 @@ public final class HudRenderer {
         float hp = t.getHealth(), max = Math.max(1f, t.getMaxHealth());
         int hearts = Math.min(10, (int) Math.ceil(max / 2f));
         String heart = "\u2665";
-        int hw = tr.getWidth(heart);
+        int hw = Fonts.width(tr, heart);
         int rowW = hearts * hw;
         int cx = (int) tagX, cy = (int) tagY;
 
@@ -174,16 +169,16 @@ public final class HudRenderer {
         for (int i = 0; i < hearts; i++) {
             float need = hp / max * hearts * 2f - i * 2f; // сколько "половинок" в этом сердце
             int col = need >= 2f ? 0xFFFF4D6D : (need >= 1f ? 0xFFB0364C : 0xFF3A3A48);
-            ctx.drawText(tr, heart, hx + i * hw, hy, col, true);
+            Fonts.draw(ctx, tr, heart, hx + i * hw, hy, col, true);
         }
 
         // ник
         String name = t.getName().getString();
-        ctx.drawText(tr, name, cx - tr.getWidth(name) / 2, hy + 11, Theme.TEXT, true);
+        Fonts.draw(ctx, tr, name, cx - Fonts.width(tr, name) / 2, hy + 11, Theme.TEXT, true);
 
         // N Здоровье
         String hpText = (int) Math.ceil(hp) + " \u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435";
-        ctx.drawText(tr, hpText, cx - tr.getWidth(hpText) / 2, hy + 22, Theme.accent(0), true);
+        Fonts.draw(ctx, tr, hpText, cx - Fonts.width(tr, hpText) / 2, hy + 22, Theme.accent(0), true);
     }
 
     private static void drawModuleList(DrawContext ctx, TextRenderer tr) {
@@ -192,12 +187,12 @@ public final class HudRenderer {
             if (m.anim > 0f && m != ModuleManager.MODULE_LIST) visible.add(m);
         }
         if (!ModuleManager.MODULE_LIST.enabled) return;
-        visible.sort(Comparator.comparingInt((Module m) -> tr.getWidth(m.name)).reversed());
+        visible.sort(Comparator.comparingInt((Module m) -> Fonts.width(tr, m.name)).reversed());
 
         int sw = ctx.getScaledWindowWidth();
         int y = 4, idx = 0;
         for (Module m : visible) {
-            int tw = tr.getWidth(m.name);
+            int tw = Fonts.width(tr, m.name);
             int boxW = tw + 8;
             int x = sw - (int) (boxW * m.anim) - 2;
             int alpha = (int) (255 * m.anim);
@@ -205,7 +200,7 @@ public final class HudRenderer {
 
             ctx.fill(x, y, sw, y + 11, Theme.withAlpha(Theme.BG, (int) (0xC0 * m.anim)));
             ctx.fill(sw - 2, y, sw, y + 11, color);
-            ctx.drawText(tr, m.name, x + 4, y + 2, color, false);
+            Fonts.draw(ctx, tr, m.name, x + 4, y + 2, color, false);
 
             y += (int) (11 * m.anim);
             idx++;

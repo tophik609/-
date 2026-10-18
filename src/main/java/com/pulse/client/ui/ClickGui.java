@@ -12,7 +12,7 @@ import java.util.List;
 
 /** Тёмное меню в стиле Pulse: переключатели в 2 колонки, вкладки снизу, пресеты цвета. */
 public class ClickGui extends Screen {
-    private static final int PW = 300, PH = 200;
+    private static final int PW = 300, PH = 244;
     private static final int COL_W = 134, ROW_H = 24, GAP = 6, PAD = 12;
     private static final String[] TABS = {ModuleManager.VISUALS, ModuleManager.HUD, "Presets"};
 
@@ -50,6 +50,7 @@ public class ClickGui extends Screen {
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
         super.render(ctx, mx, my, delta);
+        com.pulse.client.module.Cam.update(net.minecraft.client.MinecraftClient.getInstance());
         int x = px(), y = py();
         int accent = Theme.accent(0);
 
@@ -57,10 +58,10 @@ public class ClickGui extends Screen {
 
         // заголовок
         String title = "PulseVisuals";
-        int tw = textRenderer.getWidth(title);
+        int tw = Fonts.width(textRenderer, title);
         int tx = x + PW / 2 - (tw + 14) / 2;
         Gfx.round(ctx, tx, y + 11, 8, 8, 2, accent);
-        ctx.drawText(textRenderer, title, tx + 14, y + 11, Theme.TEXT, false);
+        Fonts.draw(ctx, textRenderer, title, tx + 14, y + 11, Theme.TEXT, false);
         ctx.fill(x + PAD, y + 28, x + PW - PAD, y + 29, 0x22FFFFFF);
 
         if (TABS[tab].equals("Presets")) renderPresets(ctx, mx, my, x, y);
@@ -73,8 +74,8 @@ public class ClickGui extends Screen {
             boolean hov = mx >= bx && mx < bx + 58 && my >= by && my < by + 16;
             Gfx.round(ctx, bx, by, 58, 16, 6,
                     sel ? Theme.withAlpha(accent, 0x55) : (hov ? Theme.CARD_HOVER : Theme.CARD));
-            int cw = textRenderer.getWidth(TABS[i]);
-            ctx.drawText(textRenderer, TABS[i], bx + 29 - cw / 2, by + 4,
+            int cw = Fonts.width(textRenderer, TABS[i]);
+            Fonts.draw(ctx, textRenderer, TABS[i], bx + 29 - cw / 2, by + 4,
                     sel ? Theme.TEXT : Theme.TEXT_DIM, false);
         }
     }
@@ -87,16 +88,16 @@ public class ClickGui extends Screen {
             int cy = y + 36 + (i / 2) * (ROW_H + GAP);
             boolean hov = mx >= cx && mx < cx + COL_W && my >= cy && my < cy + ROW_H;
             Gfx.round(ctx, cx, cy, COL_W, ROW_H, 6, hov ? Theme.CARD_HOVER : Theme.CARD);
-            ctx.drawText(textRenderer, m.name, cx + 8, cy + 8, Theme.TEXT, false);
+            Fonts.draw(ctx, textRenderer, m.name, cx + 8, cy + 8, Theme.TEXT, false);
             Gfx.switchToggle(ctx, cx + COL_W - 30, cy + 7, m.anim, accent);
             if (hov) {
-                ctx.drawText(textRenderer, m.description, x + PAD, y + PH - 40, Theme.TEXT_DIM, false);
+                Fonts.draw(ctx, textRenderer, m.description, x + PAD, y + PH - 40, Theme.TEXT_DIM, false);
             }
         }
     }
 
     private void renderPresets(DrawContext ctx, int mx, int my, int x, int y) {
-        ctx.drawText(textRenderer, "Цветовые пресеты", x + PAD, y + 36, Theme.TEXT_DIM, false);
+        Fonts.draw(ctx, textRenderer, "Цветовые пресеты", x + PAD, y + 36, Theme.TEXT_DIM, false);
         for (int i = 0; i < Theme.PRESET_NAMES.length; i++) {
             int cy = y + 50 + i * (ROW_H + GAP);
             int cx = x + PAD, cw = PW - PAD * 2;
@@ -104,7 +105,7 @@ public class ClickGui extends Screen {
             boolean hov = mx >= cx && mx < cx + cw && my >= cy && my < cy + ROW_H;
             Gfx.round(ctx, cx, cy, cw, ROW_H, 6, hov ? Theme.CARD_HOVER : Theme.CARD);
             if (sel) ctx.fill(cx, cy + 4, cx + 2, cy + ROW_H - 4, Theme.presetColor(i, 0));
-            ctx.drawText(textRenderer, Theme.PRESET_NAMES[i], cx + 10, cy + 8, Theme.TEXT, false);
+            Fonts.draw(ctx, textRenderer, Theme.PRESET_NAMES[i], cx + 10, cy + 8, Theme.TEXT, false);
             // градиентная полоска-превью справа
             int gx = cx + cw - 70, gw = 60;
             for (int k = 0; k < gw; k++) {

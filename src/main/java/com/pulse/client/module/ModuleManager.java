@@ -21,7 +21,7 @@ public class ModuleManager {
 
     public static Module WATERMARK, INFO, MODULE_LIST, TARGET_HUD, TARGET_TAG,
             FULLBRIGHT, TRAIL, HIT_EFFECTS, JUMP_CIRCLE, CROSSHAIR, HIT_SOUNDS,
-            KEYSTROKES, EFFECTS_HUD, ARMOR_HUD, COMBO, DAMAGE_NUMBERS;
+            KEYSTROKES, EFFECTS_HUD, ARMOR_HUD, COMBO, DAMAGE_NUMBERS, CHINA_HAT;
 
     /** Последняя цель удара — для Target HUD */
     public static LivingEntity lastTarget;
@@ -69,22 +69,19 @@ public class ModuleManager {
         CROSSHAIR = add(new Module("Crosshair", "Свой прицел вместо ванильного", VISUALS) {}, false);
         HIT_SOUNDS = add(new Module("Hit Sounds", "Звук при ударе", VISUALS) {}, false);
 
-        JUMP_CIRCLE = add(new Module("Jump Circle", "Кольцо под ногами при прыжке", VISUALS) {
+        JUMP_CIRCLE = add(new Module("Jump Circle", "Кольца под ногами при прыжке", VISUALS) {
             @Override public void onTick(MinecraftClient mc) {
-                if (mc.player == null || mc.world == null) return;
+                if (mc.player == null) return;
                 boolean ground = mc.player.isOnGround();
                 if (wasOnGround && !ground && mc.player.getVelocity().y > 0) {
                     Vec3d p = mc.player.getEntityPos();
-                    for (int i = 0; i < 36; i++) {
-                        double a = i * Math.PI * 2 / 36;
-                        mc.world.addParticleClient(dust(1.2f),
-                                p.x + Math.cos(a) * 0.85, p.y + 0.05, p.z + Math.sin(a) * 0.85,
-                                0, 0, 0);
-                    }
+                    Rings.spawn(p.x, p.y, p.z);
                 }
                 wasOnGround = ground;
             }
-        }, false);
+        }, true);
+
+        CHINA_HAT = add(new Module("China Hat", "Светящаяся шляпа над головой (3-е лицо)", VISUALS) {}, true);
     }
 
     private static DustParticleEffect dust(float scale) {
@@ -115,6 +112,7 @@ public class ModuleManager {
 
     public static void tick(MinecraftClient mc) {
         Comets.tick();
+        Rings.tick();
         com.pulse.client.ui.Widgets.tick(mc);
         for (Module m : MODULES) {
             m.tickAnim();

@@ -1,5 +1,6 @@
 package com.pulse.client.module;
 
+import com.pulse.client.ui.Fx;
 import com.pulse.client.ui.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -11,45 +12,46 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-/**
- * Светящиеся штрихи-«кометы» при ударе: летят дугами от цели, у каждой хвост,
- * белая сердцевина и цветной край. Рисуются в экранном пространстве.
- */
+/** Светящиеся штрихи при ударе: дуги с хвостом, белая сердцевина, цветное свечение. */
 public final class Comets {
     private Comets() {}
 
-    private static final int TRAIL = 8;
+    private static final int TRAIL = 6;
+    private static final int COUNT = 12;
     private static final Random RNG = new Random();
     private static final List<Comet> LIST = new ArrayList<>();
     private static long lastTickMs = System.currentTimeMillis();
 
     private static final class Comet {
-        double x, y, z, vx, vy, vz;
-        double spin;
-        int age, life;
+        double x, y, z, vx, vy, vz, spin;
+        int age, life, n;
         float size;
-        final double[][] hist = new double[TRAIL][3];
-        int histN = 0;
+        final double[] hx = new double[TRAIL], hy = new double[TRAIL], hz = new double[TRAIL];
+    }
+
+    /** Доля текущего тика (0..1) для плавной интерполяции между тиками. */
+    public static float partial() {
+        return Math.min(1f, (System.currentTimeMillis() - lastTickMs) / 50f);
     }
 
     public static void burst(Entity target) {
         Vec3d p = target.getEntityPos().add(0, target.getHeight() * 0.55, 0);
-        int n = 16;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < COUNT; i++) {
             Comet c = new Comet();
             c.x = p.x + (RNG.nextDouble() - 0.5) * 0.3;
             c.y = p.y + (RNG.nextDouble() - 0.5) * 0.5;
             c.z = p.z + (RNG.nextDouble() - 0.5) * 0.3;
             double a = RNG.nextDouble() * Math.PI * 2;
-            double sp = 0.22 + RNG.nextDouble() * 0.30;
+            double sp = 0.20 + RNG.nextDouble() * 0.28;
             c.vx = Math.cos(a) * sp;
             c.vz = Math.sin(a) * sp;
-            c.vy = (RNG.nextDouble() - 0.25) * 0.28;
+            c.vy = (RNG.nextDouble() - 0.25) * 0.26;
             c.spin = (RNG.nextBoolean() ? 1 : -1) * (0.10 + RNG.nextDouble() * 0.16);
-            c.life = 12 + RNG.nextInt(8);
-            c.size = RNG.nextFloat() < 0.25f ? 4f : 2.6f;
+            c.life = 11 + RNG.nextInt(7);
+            c.size = RNG.nextFloat() < 0.25f ? 3.4f : 2.2f;
             LIST.add(c);
         }
+        if (LIST.size() > 80) LIST.subList(0, LIST.size() - 80).clear();
     }
 
     public static void tick() {
@@ -57,13 +59,14 @@ public final class Comets {
         Iterator<Comet> it = LIST.iterator();
         while (it.hasNext()) {
             Comet c = it.next();
-            // записываем историю позиций для хвоста
-            System.arraycopy(c.hist, 0, c.hist, 1, TRAIL - 1);
-            // чтобы не плодить массивы — копируем значения
-            c.hist[0] = new double[]{c.x, c.y, c.z};
-            c.histN = Math.min(TRAIL, c.histN + 1);
+            System.arraycopy(c.hx, 0, c.hx, 1, TRAIL - 1);
+            System.arraycopy(c.hy, 0, c.hy, 1, TRAIL - 1);
+            System.arraycopy(c.hz, 0, c.hz, 1, TRAIL - 1);
+            c.hx[0] = c.x;
+            c.hy[0] = c.y;
+            c.hz[0] = c.z;
+            c.n = Math.min(TRAIL, c.n + 1);
 
-            // поворот скорости вокруг вертикали = изогнутая дуга
             double cos = Math.cos(c.spin), sin = Math.sin(c.spin);
             double nvx = c.vx * cos - c.vz * sin;
             double nvz = c.vx * sin + c.vz * cos;
@@ -77,75 +80,39 @@ public final class Comets {
         }
     }
 
-    public static void render(DrawContext ctx, MinecraftClient mc) {
-        if (LIST.isEmpty() || mc.player == null) return;
-        float partial = Math.min(1f, (System.currentTimeMillis() - lastTickMs) / 50f);
-        int sw = ctx.getScaledWindowWidth(), sh = ctx.getScaledWindowHeight();
+    /** Вызывать внутри Fx.begin/end (координаты в физических пикселях). */
+    public static void render(DrawContext ctx) {
+        if (LIST.isEmpty()) return;
+        float partial = partial();
+        float u = Fx.u();
 
         int accent = Theme.accent(0) & 0xFFFFFF;
-        int edge = accent;
-        int core = Theme.lerp(accent, 0xFFFFFF, 0.78f);
+        int core = Theme.lerp(accent, 0xFFFFFF, 0.8f);
 
         for (Comet c : LIST) {
             float life = 1f - (c.age + partial) / c.life;
-            if (life <= 0f) continue;
+            if (life <= 0f || c.n == 0) continue;
 
-            // позиция головы, интерполированная между тиками
-            double[] prev = c.histN > 0 ? c.hist[0] : new double[]{c.x, c.y, c.z};
-            double hx = prev[0] + (c.x - prev[0]) * partial;
-            double hy = prev[1] + (c.y - prev[1]) * partial;
-            double hz = prev[2] + (c.z - prev[2]) * partial;
-
-            float[] last = project(mc, hx, hy, hz, sw, sh);
+            double hx = c.hx[0] + (c.x - c.hx[0]) * partial;
+            double hy = c.hy[0] + (c.y - c.hy[0]) * partial;
+            double hz = c.hz[0] + (c.z - c.hz[0]) * partial;
+            float[] last = Cam.projectPx(hx, hy, hz);
             if (last == null) continue;
 
-            int segs = Math.min(c.histN, TRAIL);
-            for (int i = 0; i < segs; i++) {
-                double[] h = c.hist[i];
-                float[] cur = project(mc, h[0], h[1], h[2], sw, sh);
+            for (int i = 0; i < c.n; i++) {
+                float[] cur = Cam.projectPx(c.hx[i], c.hy[i], c.hz[i]);
                 if (cur == null) break;
-                float k = 1f - i / (float) segs;       // 1 у головы, 0 у хвоста
-                float width = Math.max(1f, c.size * k);
-                int a = (int) (255 * life * (0.25f + 0.75f * k));
-                // внешний цветной край и светлая сердцевина
-                line(ctx, last[0], last[1], cur[0], cur[1], width + 2f, Theme.withAlpha(edge, a / 2));
-                line(ctx, last[0], last[1], cur[0], cur[1], width, Theme.withAlpha(core, a));
+                float k = 1f - i / (float) c.n;
+                float w = Math.max(1f, c.size * u * (0.3f + 0.7f * k));
+                Fx.glowLine(ctx, last[0], last[1], cur[0], cur[1], w, accent, core,
+                        life * (0.3f + 0.7f * k));
                 last = cur;
             }
         }
     }
 
-    private static void line(DrawContext ctx, float x0, float y0, float x1, float y1, float w, int color) {
-        float dx = x1 - x0, dy = y1 - y0;
-        int steps = (int) Math.min(90, Math.max(1, Math.max(Math.abs(dx), Math.abs(dy))));
-        int s = Math.max(1, Math.round(w));
-        int half = s / 2;
-        for (int i = 0; i <= steps; i++) {
-            int px = Math.round(x0 + dx * i / steps) - half;
-            int py = Math.round(y0 + dy * i / steps) - half;
-            ctx.fill(px, py, px + s, py + s, color);
-        }
-    }
-
-    /** Проекция точки мира в экранные координаты GUI (без миксинов). null — если позади камеры. */
+    /** Проекция в координаты GUI (для текстов и меток). */
     public static float[] project(MinecraftClient mc, double wx, double wy, double wz, int sw, int sh) {
-        Vec3d eye = mc.player.getEyePos();
-        double dx = wx - eye.x, dy = wy - eye.y, dz = wz - eye.z;
-        double yaw = Math.toRadians(mc.player.getYaw());
-        double pitch = Math.toRadians(mc.player.getPitch());
-        double fx = -Math.sin(yaw) * Math.cos(pitch), fy = -Math.sin(pitch), fz = Math.cos(yaw) * Math.cos(pitch);
-        double rx = -Math.cos(yaw), ry = 0, rz = -Math.sin(yaw);
-        double ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
-        double z = dx * fx + dy * fy + dz * fz;
-        if (z < 0.15) return null;
-        double x = dx * rx + dy * ry + dz * rz;
-        double y = dx * ux + dy * uy + dz * uz;
-        double fov = Math.toRadians(mc.options.getFov().getValue());
-        double f = 1.0 / Math.tan(fov / 2.0);
-        double aspect = (double) sw / sh;
-        return new float[]{
-                (float) ((x / z) * f / aspect * 0.5 + 0.5) * sw,
-                (float) (0.5 - (y / z) * f * 0.5) * sh
-        };
+        return Cam.project(wx, wy, wz, sw, sh);
     }
 }

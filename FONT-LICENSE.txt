@@ -1,0 +1,2 @@
+Liberation Sans (src/main/resources/assets/pulsevisuals/font/ui.ttf)
+Copyright (c) Red Hat, Inc. Licensed under the SIL Open Font License 1.1 (https://openfontlicense.org).

@@ -98,7 +98,7 @@ public final class Widgets {
         int bg = Theme.lerp(0x14141E, Theme.accent(idx * 30) & 0xFFFFFF, k * 0.6f) | 0xD0000000;
         Gfx.round(ctx, x, y, w, h, 4, bg);
         int tc = Theme.lerp(0x9A9AB0, 0xFFFFFF, k) | 0xFF000000;
-        ctx.drawText(tr, label, x + w / 2 - tr.getWidth(label) / 2, y + h / 2 - 4, tc, false);
+        Fonts.draw(ctx, tr, label, x + w / 2 - Fonts.width(tr, label) / 2, y + h / 2 - 4, tc, false);
     }
 
     private static void keystrokes(DrawContext ctx, TextRenderer tr, MinecraftClient mc) {
@@ -113,7 +113,7 @@ public final class Widgets {
         keyCell(ctx, tr, 4, mc.options.attackKey.isPressed(), x, my, mw, box, "LMB");
         keyCell(ctx, tr, 5, mc.options.useKey.isPressed(), x + mw + g, my, mw, box, "RMB");
         String cps = CLICKS.size() + " CPS";
-        ctx.drawText(tr, cps, x, my + box + 3, Theme.TEXT_DIM, true);
+        Fonts.draw(ctx, tr, cps, x, my + box + 3, Theme.TEXT_DIM, true);
     }
 
     private static String fmtTime(int ticks) {
@@ -127,10 +127,10 @@ public final class Widgets {
             if (ModuleManager.FULLBRIGHT.enabled && e.getEffectType() == StatusEffects.NIGHT_VISION) continue;
             String name = e.getEffectType().value().getName().getString();
             String line = name + " " + (e.getAmplifier() + 1) + "  " + fmtTime(e.getDuration());
-            int w = tr.getWidth(line) + 10;
+            int w = Fonts.width(tr, line) + 10;
             Gfx.round(ctx, 4, y, w, 12, 4, Theme.BG);
             ctx.fill(4, y + 2, 5, y + 10, Theme.accent(y));
-            ctx.drawText(tr, line, 9, y + 2, Theme.TEXT, false);
+            Fonts.draw(ctx, tr, line, 9, y + 2, Theme.TEXT, false);
             y += 14;
         }
     }
@@ -159,12 +159,12 @@ public final class Widgets {
         long age = System.currentTimeMillis() - lastHit;
         if (combo < 2 || age > 3000) return;
         String text = "Combo x" + combo;
-        int w = tr.getWidth(text) + 12;
+        int w = Fonts.width(tr, text) + 12;
         int x = ctx.getScaledWindowWidth() / 2 - w / 2;
         int y = ctx.getScaledWindowHeight() / 2 + 46;
         int alpha = age > 2400 ? (int) (255 * (3000 - age) / 600f) : 255;
         Gfx.round(ctx, x, y, w, 14, 5, Theme.withAlpha(0x101018, (int) (alpha * 0.75f)));
-        ctx.drawText(tr, text, x + 6, y + 3, Theme.withAlpha(Theme.accent(0), alpha), false);
+        Fonts.draw(ctx, tr, text, x + 6, y + 3, Theme.withAlpha(Theme.accent(0), alpha), false);
     }
 
     private static void damageNumbers(DrawContext ctx, TextRenderer tr, MinecraftClient mc) {
@@ -174,7 +174,7 @@ public final class Widgets {
             if (p == null) continue;
             int alpha = Math.max(40, (int) (255 * (1f - d.age / 26f)));
             int color = Theme.withAlpha(0xFF5577, alpha);
-            ctx.drawText(tr, d.text, (int) p[0] - tr.getWidth(d.text) / 2, (int) p[1], color, true);
+            Fonts.draw(ctx, tr, d.text, (int) p[0] - Fonts.width(tr, d.text) / 2, (int) p[1], color, true);
         }
     }
 }
