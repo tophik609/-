@@ -2,7 +2,6 @@ package com.pulse.client.module;
 
 import com.pulse.client.ui.Theme;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -100,8 +99,9 @@ public class ModuleManager {
         }
         if (HIT_SOUNDS.enabled) {
             MinecraftClient mc = MinecraftClient.getInstance();
-            mc.getSoundManager().play(PositionedSoundInstance.master(
-                    SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f));
+            if (mc.player != null) {
+                mc.player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.4f);
+            }
         }
         com.pulse.client.ui.Widgets.onHit();
         if (HIT_EFFECTS.enabled) Comets.burst(target);
