@@ -41,6 +41,12 @@ public class PulseClient implements ClientModInitializer {
                 Identifier.of(MOD_ID, "hud"),
                 HudRenderer::render);
 
+        // Свой прицел (если модуль включён — рисуем свой, иначе ванильный)
+        HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, original -> (ctx, tc) -> {
+            if (ModuleManager.CROSSHAIR.enabled) HudRenderer.drawCrosshair(ctx);
+            else original.render(ctx, tc);
+        });
+
         // Эффекты при ударе
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             if (world.isClient()) ModuleManager.onAttack(entity);

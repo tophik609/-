@@ -2,13 +2,13 @@ package com.pulse.client.module;
 
 import com.pulse.client.ui.Theme;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.DustParticleEffect;
-import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.ArrayList;
@@ -20,8 +20,8 @@ public class ModuleManager {
 
     public static final List<Module> MODULES = new ArrayList<>();
 
-    public static Module WATERMARK, INFO, MODULE_LIST, TARGET_HUD,
-            FULLBRIGHT, TRAIL, HIT_EFFECTS, JUMP_CIRCLE;
+    public static Module WATERMARK, INFO, MODULE_LIST, TARGET_HUD, TARGET_TAG,
+            FULLBRIGHT, TRAIL, HIT_EFFECTS, JUMP_CIRCLE, CROSSHAIR, HIT_SOUNDS;
 
     /** Последняя цель удара — для Target HUD */
     public static LivingEntity lastTarget;
@@ -34,6 +34,8 @@ public class ModuleManager {
         INFO = add(new Module("Info", "Координаты внизу слева", HUD) {}, true);
         MODULE_LIST = add(new Module("ModuleList", "Список включённых модулей", HUD) {}, true);
         TARGET_HUD = add(new Module("TargetHUD", "Карточка цели с HP", HUD) {}, true);
+
+        TARGET_TAG = add(new Module("Target Tag", "Сердца и здоровье над головой цели", VISUALS) {}, true);
 
         FULLBRIGHT = add(new Module("Full Bright", "Полная яркость", VISUALS) {
             @Override public void onTick(MinecraftClient mc) {
@@ -57,7 +59,9 @@ public class ModuleManager {
             }
         }, false);
 
-        HIT_EFFECTS = add(new Module("Hit Effects", "Спираль частиц при ударе", VISUALS) {}, true);
+        HIT_EFFECTS = add(new Module("Hit Effects", "Светящиеся штрихи при ударе", VISUALS) {}, true);
+        CROSSHAIR = add(new Module("Crosshair", "Свой прицел вместо ванильного", VISUALS) {}, false);
+        HIT_SOUNDS = add(new Module("Hit Sounds", "Звук при ударе", VISUALS) {}, false);
 
         JUMP_CIRCLE = add(new Module("Jump Circle", "Кольцо под ногами при прыжке", VISUALS) {
             @Override public void onTick(MinecraftClient mc) {
@@ -87,26 +91,12 @@ public class ModuleManager {
             lastTarget = le;
             lastTargetTime = System.currentTimeMillis();
         }
-        if (!HIT_EFFECTS.enabled) return;
-        ClientWorld world = MinecraftClient.getInstance().world;
-        if (world == null) return;
-
-        Vec3d p = target.getEntityPos();
-        double h = target.getHeight();
-        // спираль вокруг цели
-        for (int i = 0; i < 40; i++) {
-            double a = i * 0.55;
-            double y = p.y + (i / 40.0) * h;
-            double r = 0.55;
-            world.addParticleClient(dust(1.1f),
-                    p.x + Math.cos(a) * r, y, p.z + Math.sin(a) * r, 0, 0, 0);
+        if (HIT_SOUNDS.enabled) {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            mc.getSoundManager().play(PositionedSoundInstance.master(
+                    SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f));
         }
-        for (int i = 0; i < 10; i++) {
-            world.addParticleClient(ParticleTypes.CRIT, p.x, p.y + h / 2, p.z,
-                    (world.random.nextDouble() - 0.5) * 0.6,
-                    (world.random.nextDouble() - 0.2) * 0.5,
-                    (world.random.nextDouble() - 0.5) * 0.6);
-        }
+        if (HIT_EFFECTS.enabled) Comets.burst(target);
     }
 
     private static Module add(Module m, boolean on) {
@@ -116,6 +106,7 @@ public class ModuleManager {
     }
 
     public static void tick(MinecraftClient mc) {
+        Comets.tick();
         for (Module m : MODULES) {
             m.tickAnim();
             if (m.enabled) m.onTick(mc);

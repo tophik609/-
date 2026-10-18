@@ -28,7 +28,23 @@ public final class HudRenderer {
         if (ModuleManager.WATERMARK.enabled) drawWatermark(ctx, tr, mc);
         if (ModuleManager.INFO.enabled) drawInfo(ctx, tr, mc);
         if (ModuleManager.TARGET_HUD.enabled) drawTarget(ctx, tr, mc);
+        if (ModuleManager.TARGET_TAG.enabled) drawTargetTag(ctx, tr, mc);
         drawModuleList(ctx, tr);
+        if (ModuleManager.HIT_EFFECTS.enabled) com.pulse.client.module.Comets.render(ctx, mc);
+    }
+
+    /** Свой прицел: точка в центре и четыре засечки. */
+    public static void drawCrosshair(DrawContext ctx) {
+        int cx = ctx.getScaledWindowWidth() / 2, cy = ctx.getScaledWindowHeight() / 2;
+        int c = Theme.accent(0);
+        int dark = 0x90000000;
+        ctx.fill(cx - 1, cy - 1, cx + 2, cy + 2, dark);
+        ctx.fill(cx, cy, cx + 1, cy + 1, c);
+        int[][] arms = {{-6, 0, -3, 1}, {4, 0, 7, 1}, {0, -6, 1, -3}, {0, 4, 1, 7}};
+        for (int[] a : arms) {
+            ctx.fill(cx + a[0] - 1, cy + a[1] - 1, cx + a[2] + 1, cy + a[3] + 1, dark);
+            ctx.fill(cx + a[0], cy + a[1], cx + a[2], cy + a[3], c);
+        }
     }
 
     private static int ping(MinecraftClient mc) {
@@ -106,6 +122,65 @@ public final class HudRenderer {
         for (int i = 0; i < fill; i++) {
             ctx.fill(bx + i, by, bx + i + 1, by + 3, Theme.accent(i * 3));
         }
+    }
+
+    // ---- метка над головой цели (проекция мира на экран без миксинов) ----
+    private static float tagX = -1, tagY = -1;
+
+    private static void drawTargetTag(DrawContext ctx, TextRenderer tr, MinecraftClient mc) {
+        LivingEntity t = pickTarget(mc);
+        if (t == null || t == mc.player) { tagX = -1; return; }
+
+        net.minecraft.util.math.Vec3d eye = mc.player.getEyePos();
+        net.minecraft.util.math.Vec3d head = t.getEntityPos().add(0, t.getHeight() + 0.45, 0);
+        double dx = head.x - eye.x, dy = head.y - eye.y, dz = head.z - eye.z;
+
+        double yaw = Math.toRadians(mc.player.getYaw());
+        double pitch = Math.toRadians(mc.player.getPitch());
+        double fx = -Math.sin(yaw) * Math.cos(pitch), fy = -Math.sin(pitch), fz = Math.cos(yaw) * Math.cos(pitch);
+        double rx = -Math.cos(yaw), ry = 0, rz = -Math.sin(yaw);
+        double ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
+
+        double z = dx * fx + dy * fy + dz * fz;
+        if (z < 0.2) { tagX = -1; return; }
+        double x = dx * rx + dy * ry + dz * rz;
+        double y = dx * ux + dy * uy + dz * uz;
+
+        int sw = ctx.getScaledWindowWidth(), sh = ctx.getScaledWindowHeight();
+        double fov = Math.toRadians(mc.options.getFov().getValue());
+        double f = 1.0 / Math.tan(fov / 2.0);
+        double aspect = (double) sw / sh;
+        float px = (float) ((x / z) * f / aspect * 0.5 + 0.5) * sw;
+        float py = (float) (0.5 - (y / z) * f * 0.5) * sh;
+
+        // сглаживание, чтобы метка не дёргалась на 20 тиках
+        if (tagX < 0) { tagX = px; tagY = py; }
+        tagX += (px - tagX) * 0.5f;
+        tagY += (py - tagY) * 0.5f;
+
+        float hp = t.getHealth(), max = Math.max(1f, t.getMaxHealth());
+        int hearts = Math.min(10, (int) Math.ceil(max / 2f));
+        String heart = "\u2665";
+        int hw = tr.getWidth(heart);
+        int rowW = hearts * hw;
+        int cx = (int) tagX, cy = (int) tagY;
+
+        // сердца
+        int hx = cx - rowW / 2;
+        int hy = cy - 28;
+        for (int i = 0; i < hearts; i++) {
+            float need = hp / max * hearts * 2f - i * 2f; // сколько "половинок" в этом сердце
+            int col = need >= 2f ? 0xFFFF4D6D : (need >= 1f ? 0xFFB0364C : 0xFF3A3A48);
+            ctx.drawText(tr, heart, hx + i * hw, hy, col, true);
+        }
+
+        // ник
+        String name = t.getName().getString();
+        ctx.drawText(tr, name, cx - tr.getWidth(name) / 2, hy + 11, Theme.TEXT, true);
+
+        // N Здоровье
+        String hpText = (int) Math.ceil(hp) + " \u0417\u0434\u043e\u0440\u043e\u0432\u044c\u0435";
+        ctx.drawText(tr, hpText, cx - tr.getWidth(hpText) / 2, hy + 22, Theme.accent(0), true);
     }
 
     private static void drawModuleList(DrawContext ctx, TextRenderer tr) {

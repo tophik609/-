@@ -3,8 +3,9 @@ package com.pulse.client.ui;
 public final class Theme {
     private Theme() {}
 
-    public static final String[] PRESET_NAMES = {"Purple", "Pink & Red", "Ocean"};
+    public static final String[] PRESET_NAMES = {"Magenta", "Purple", "Pink & Red", "Ocean"};
     private static final int[][] PRESETS = {
+            {0xFF4DE8, 0xB026FF},
             {0x8B5CF6, 0x6366F1},
             {0xFF4D8D, 0xFF3B3B},
             {0x38BDF8, 0x6366F1}
