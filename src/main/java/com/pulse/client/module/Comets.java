@@ -128,7 +128,7 @@ public final class Comets {
     }
 
     /** Проекция точки мира в экранные координаты GUI (без миксинов). null — если позади камеры. */
-    private static float[] project(MinecraftClient mc, double wx, double wy, double wz, int sw, int sh) {
+    public static float[] project(MinecraftClient mc, double wx, double wy, double wz, int sw, int sh) {
         Vec3d eye = mc.player.getEyePos();
         double dx = wx - eye.x, dy = wy - eye.y, dz = wz - eye.z;
         double yaw = Math.toRadians(mc.player.getYaw());

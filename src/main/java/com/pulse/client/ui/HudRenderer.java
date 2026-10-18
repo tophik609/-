@@ -30,6 +30,7 @@ public final class HudRenderer {
         if (ModuleManager.TARGET_HUD.enabled) drawTarget(ctx, tr, mc);
         if (ModuleManager.TARGET_TAG.enabled) drawTargetTag(ctx, tr, mc);
         drawModuleList(ctx, tr);
+        Widgets.render(ctx, tr, mc);
         if (ModuleManager.HIT_EFFECTS.enabled) com.pulse.client.module.Comets.render(ctx, mc);
     }
 
@@ -63,6 +64,8 @@ public final class HudRenderer {
         int w = 10 + 8 + tr.getWidth(a) + 8 + tr.getWidth(b) + 8 + tr.getWidth(c) + 6;
         int x = ctx.getScaledWindowWidth() / 2 - w / 2, y = 4, h = 14;
         Gfx.round(ctx, x, y, w, h, 5, Theme.BG);
+        // градиентная линия снизу плашки
+        for (int i = 4; i < w - 4; i++) ctx.fill(x + i, y + h - 1, x + i + 1, y + h, Theme.accent(i * 5));
         // акцентная точка
         Gfx.round(ctx, x + 5, y + 4, 6, 6, 3, Theme.accent(0));
         int cx = x + 16;

@@ -3,12 +3,12 @@ package com.pulse.client.module;
 import com.pulse.client.ui.Theme;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.DustParticleEffect;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.ArrayList;
@@ -21,7 +21,8 @@ public class ModuleManager {
     public static final List<Module> MODULES = new ArrayList<>();
 
     public static Module WATERMARK, INFO, MODULE_LIST, TARGET_HUD, TARGET_TAG,
-            FULLBRIGHT, TRAIL, HIT_EFFECTS, JUMP_CIRCLE, CROSSHAIR, HIT_SOUNDS;
+            FULLBRIGHT, TRAIL, HIT_EFFECTS, JUMP_CIRCLE, CROSSHAIR, HIT_SOUNDS,
+            KEYSTROKES, EFFECTS_HUD, ARMOR_HUD, COMBO, DAMAGE_NUMBERS;
 
     /** Последняя цель удара — для Target HUD */
     public static LivingEntity lastTarget;
@@ -34,6 +35,12 @@ public class ModuleManager {
         INFO = add(new Module("Info", "Координаты внизу слева", HUD) {}, true);
         MODULE_LIST = add(new Module("ModuleList", "Список включённых модулей", HUD) {}, true);
         TARGET_HUD = add(new Module("TargetHUD", "Карточка цели с HP", HUD) {}, true);
+
+        KEYSTROKES = add(new Module("Keystrokes", "WASD, мышь и CPS", HUD) {}, true);
+        EFFECTS_HUD = add(new Module("Effects", "Активные эффекты с таймером", HUD) {}, true);
+        ARMOR_HUD = add(new Module("Armor HUD", "Броня и прочность справа", HUD) {}, true);
+        COMBO = add(new Module("Combo", "Счётчик комбо ударов", HUD) {}, true);
+        DAMAGE_NUMBERS = add(new Module("Damage Numbers", "Всплывающий урон над целью", VISUALS) {}, true);
 
         TARGET_TAG = add(new Module("Target Tag", "Сердца и здоровье над головой цели", VISUALS) {}, true);
 
@@ -96,6 +103,7 @@ public class ModuleManager {
             mc.getSoundManager().play(PositionedSoundInstance.master(
                     SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f));
         }
+        com.pulse.client.ui.Widgets.onHit();
         if (HIT_EFFECTS.enabled) Comets.burst(target);
     }
 
@@ -107,6 +115,7 @@ public class ModuleManager {
 
     public static void tick(MinecraftClient mc) {
         Comets.tick();
+        com.pulse.client.ui.Widgets.tick(mc);
         for (Module m : MODULES) {
             m.tickAnim();
             if (m.enabled) m.onTick(mc);

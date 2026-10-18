@@ -18,8 +18,15 @@ public class ClickGui extends Screen {
 
     private static int tab = 0;
 
+    private final long openedAt = System.currentTimeMillis();
+
     public ClickGui() {
         super(Text.literal("PulseVisuals"));
+    }
+
+    private float openK() {
+        float k = Math.min(1f, (System.currentTimeMillis() - openedAt) / 200f);
+        return 1f - (1f - k) * (1f - k);
     }
 
     @Override
@@ -28,7 +35,7 @@ public class ClickGui extends Screen {
     }
 
     private int px() { return width / 2 - PW / 2; }
-    private int py() { return height / 2 - PH / 2; }
+    private int py() { return height / 2 - PH / 2 + (int) ((1f - openK()) * 16); }
 
     private List<Module> tabModules() {
         List<Module> list = new ArrayList<>();
